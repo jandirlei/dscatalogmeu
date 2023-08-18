@@ -2,15 +2,23 @@ package br.com.matrix.dscatalogmeu.services;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import br.com.matrix.dscatalogmeu.dto.CategoryDTO;
 import br.com.matrix.dscatalogmeu.entities.Category;
 import br.com.matrix.dscatalogmeu.repositories.CategoryRepository;
+import br.com.matrix.dscatalogmeu.resources.exceptions.DatabaseException;
 import br.com.matrix.dscatalogmeu.services.exceptions.ResourceNotFoundException;
 import jakarta.persistence.EntityNotFoundException;
 
@@ -21,10 +29,9 @@ public class CategoryService {
 	private CategoryRepository categoryRepository;
 
 	@Transactional(readOnly = true)
-	public List<CategoryDTO> findAll(){
-		List<Category> list = categoryRepository.findAll();
-		List<CategoryDTO> listDto = list.stream().map(x-> new CategoryDTO(x)).collect(Collectors.toList());
-		return listDto;
+	public Page<CategoryDTO> findAllPaged(PageRequest pageRequest) {
+		Page<Category> list = categoryRepository.findAll(pageRequest);
+		return list.map(x -> new CategoryDTO(x));
 	}
 	
 	@Transactional(readOnly = true)
@@ -52,6 +59,18 @@ public class CategoryService {
 		}	
 		catch(EntityNotFoundException e) {
 			throw new ResourceNotFoundException("Id not found " + id);
+		}
+	}
+
+	public void delete(Long id) {
+		try {
+			categoryRepository.deleteById(id);
+		}
+		catch(EmptyResultDataAccessException e) {
+			throw new ResourceNotFoundException("Id not found " + id);
+		}
+		catch(DataIntegrityViolationException e) {
+			throw new DatabaseException("Integrity violation");
 		}
 	}
 }
